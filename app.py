@@ -12,6 +12,7 @@ score) we just tell the user this bot only knows about freedom fighters,
 instead of making something up.
 """
 
+import os
 import streamlit as st
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -22,12 +23,26 @@ st.set_page_config(page_title="Freedom Fighters Bot", page_icon="🇮🇳")
 st.title("🇮🇳 Freedom Fighters Chatbot")
 st.caption("Ask me about Gandhi, Bhagat Singh, Netaji, Rani Lakshmibai and other Indian freedom fighters. I only know this topic, so don't ask me about cricket scores 😄")
 
-DATA_PATH = "data/knowledge_base.csv"
+# Build the path relative to THIS file's own folder, not the current working
+# directory. Streamlit Cloud doesn't always run the app from the repo root,
+# so a plain "data/knowledge_base.csv" string can silently fail there even
+# though it works fine on your own laptop.
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(APP_DIR, "data", "knowledge_base.csv")
 SIMILARITY_CUTOFF = 0.12  # below this, we say "I don't know" instead of guessing
 
 
 @st.cache_resource
 def load_and_fit():
+    if not os.path.exists(DATA_PATH):
+        st.error(
+            f"Couldn't find the knowledge base file at:\n\n`{DATA_PATH}`\n\n"
+            "This usually means the `data` folder wasn't uploaded to GitHub "
+            "next to app.py, or it's nested one level too deep. "
+            "Check your repo and make sure `data/knowledge_base.csv` "
+            "sits right beside app.py at the repo root."
+        )
+        st.stop()
     df = pd.read_csv(DATA_PATH)
     # trick: repeat the person's name a couple of times before the text so
     # that a direct name match in the question weighs more than a name that
